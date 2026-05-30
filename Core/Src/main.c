@@ -21,7 +21,8 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include "driver_ads1115.h"
+#include "driver_ads1115_interface.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -40,20 +41,41 @@
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
-
+I2C_HandleTypeDef hi2c1;
+int16_t A0Raw;
+float A0Value;
 /* USER CODE BEGIN PV */
+ads1115_handle_t Ads1115;
 
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
+static void MX_I2C1_Init(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+void _init_ads1115(ads1115_handle_t *Handle) {
+	DRIVER_ADS1115_LINK_INIT(Handle, ads1115_interface_iic_init);
+	DRIVER_ADS1115_LINK_IIC_INIT(Handle, ads1115_interface_iic_init);
+	DRIVER_ADS1115_LINK_IIC_DEINIT(Handle, ads1115_interface_iic_deinit);
+	DRIVER_ADS1115_LINK_IIC_READ(Handle, ads1115_interface_iic_read);
+	DRIVER_ADS1115_LINK_IIC_WRITE(Handle, ads1115_interface_iic_write);
+	DRIVER_ADS1115_LINK_DELAY_MS(Handle, ads1115_interface_delay_ms);
+	DRIVER_ADS1115_LINK_DEBUG_PRINT(Handle, ads1115_interface_debug_print);
+
+	ads1115_set_addr_pin(Handle, ADS1115_ADDR_GND);
+	ads1115_init(Handle);
+	ads1115_set_channel(Handle, ADS1115_CHANNEL_AIN0_GND);
+	ads1115_set_range(Handle, ADS1115_RANGE_4P096V);
+	ads1115_set_rate(Handle, ADS1115_RATE_860SPS);
+	ads1115_set_compare(Handle, ADS1115_BOOL_FALSE);
+	ads1115_start_continuous_read(Handle);
+}
 
 /* USER CODE END 0 */
 
@@ -86,15 +108,18 @@ int main(void)
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
+  MX_I2C1_Init();
   /* USER CODE BEGIN 2 */
-
+  _init_ads1115(&Ads1115);
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-    /* USER CODE END WHILE */
+    ads1115_continuous_read(&Ads1115, &A0Raw, &A0Value);
+    HAL_Delay(15);
+	/* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
   }
@@ -147,6 +172,40 @@ void SystemClock_Config(void)
 }
 
 /**
+  * @brief I2C1 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_I2C1_Init(void)
+{
+
+  /* USER CODE BEGIN I2C1_Init 0 */
+
+  /* USER CODE END I2C1_Init 0 */
+
+  /* USER CODE BEGIN I2C1_Init 1 */
+
+  /* USER CODE END I2C1_Init 1 */
+  hi2c1.Instance = I2C1;
+  hi2c1.Init.ClockSpeed = 100000;
+  hi2c1.Init.DutyCycle = I2C_DUTYCYCLE_2;
+  hi2c1.Init.OwnAddress1 = 0;
+  hi2c1.Init.AddressingMode = I2C_ADDRESSINGMODE_7BIT;
+  hi2c1.Init.DualAddressMode = I2C_DUALADDRESS_DISABLE;
+  hi2c1.Init.OwnAddress2 = 0;
+  hi2c1.Init.GeneralCallMode = I2C_GENERALCALL_DISABLE;
+  hi2c1.Init.NoStretchMode = I2C_NOSTRETCH_DISABLE;
+  if (HAL_I2C_Init(&hi2c1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN I2C1_Init 2 */
+
+  /* USER CODE END I2C1_Init 2 */
+
+}
+
+/**
   * @brief GPIO Initialization Function
   * @param None
   * @retval None
@@ -168,14 +227,6 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(ADS1115_ALRT_GPIO_Port, &GPIO_InitStruct);
-
-  /*Configure GPIO pins : PB6 PB7 */
-  GPIO_InitStruct.Pin = GPIO_PIN_6|GPIO_PIN_7;
-  GPIO_InitStruct.Mode = GPIO_MODE_AF_OD;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
-  GPIO_InitStruct.Alternate = GPIO_AF4_I2C1;
-  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
   /* USER CODE BEGIN MX_GPIO_Init_2 */
 
